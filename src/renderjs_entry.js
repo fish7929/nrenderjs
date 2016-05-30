@@ -9,6 +9,8 @@ var MeArticle = require("../src/me-article.js");
 var MePageMgr = require("../src/MePageMgr.js");
 var MeSvg = require("../dist/MeSvg.js");
 var MeRadio = require("../dist/MeRadio.js");
+var MeCheckbox = require("../dist/MeCheckbox.js");
+var MeLabel = require("../dist/MeLabel.js");
 
 var EventEmitter = require("wolfy87-eventemitter");
 var React = require("react");
@@ -26,7 +28,9 @@ module.exports = {
 	MePanArea:MePanArea,
 	MePageMgr:MePageMgr,
 	MeSvg:MeSvg,
+    MeCheckbox:MeCheckbox,
     MeRadio:MeRadio,
+    MeLabel:MeLabel,
 	EventEmitter:EventEmitter,
 	React:React,
 	ReactDOM:ReactDOM
