@@ -8,16 +8,16 @@ var MeComponentMixin = require("../src/MeComponentMixin");
 		getInitialState:function(){
 			this.xBeforePan = 0;
 			this.yBeforePan = 0;
-			this.lastDeltaTime = 0;
 			return {
 				x_offset:0,
 				y_offset:0
 			}
 		},
+		lastDeltaTime:0,
 		getDefaultProps:function(){
 			return {
-				id:this.displayName + MeComponentMixin.getIncId(),//因为这个控件需要pageActive，为了减少应用的麻烦，自己先定义一个id
-				normalStyle:{}
+				normalStyle:{},
+				autoActive:true
 			};
 		},
 		interactHandle:function(evt){
@@ -34,27 +34,29 @@ var MeComponentMixin = require("../src/MeComponentMixin");
 						y_offset:this.yBeforePan + evt.deltaYgit
 					});
 				}else{
-					//this.props.cxt.interactHandler.stop();
 				}
 			}
-			//console.log("receive ",evt);
 		},
 		pageActive:function(){
-			this.props.cxt.interactHandler.on("pan swipeup swipedown swipeleft swipright",this.refs.interactArea,this.interactHandle)
+			this.componentPageActive();
+			this.props.cxt.interactHandler.on("pan swipeup swipedown swipeleft swipright",this.getId(),this.interactHandle)
 			console.log("get page active");
 		},
 		pageDeactive:function(){
+			this.componentPageDeactive();
 			this.setState({
 				x_offset:0,
 				y_offset:0
 			});
-			this.props.cxt.interactHandler.off("pan swipeup swipedown swipeleft swipright",this.refs.interactArea,this.interactHandle)
+			this.props.cxt.interactHandler.off("pan swipeup swipedown swipeleft swipright",this.getId(),this.interactHandle)
 			console.log("get page deactive");
 		},
 		render:function(){
 			var  transform = "translate3d(" + this.state.x_offset +"px," + this.state.y_offset + "px,0px)";
-			this.props.normalStyle.transform = transform;
-			return(<div ref="interactArea" style={this.props.normalStyle}>{this.props.children}</div>);
+			var _style = this.props.normalStyle;
+			_style.transform = transform;
+			this.updateStyleForDisplay();
+			return(<div id={this.getId()} ref="interactArea" style={_style}>{this.props.children}</div>);
 		}
 	});
 	return MePanArea;

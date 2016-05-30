@@ -7,21 +7,8 @@ define([],function(){
 			
 		},
 		"pageTo:":function(cxt,callee,args){
-			
 		},
-		//componentDo(componentName, method, args...)
-		"componentDo":function(cxt,callee,args){
-			var pageInstance = callee.getPageInstance();
-			if(pageInstance != null && args.length > 1){
-				var el = pageInstance.getComponent(args[0]);
-				if(el != null && el.hasOwnProperty(args[1])){
-					var compMethod = el[args[1]];
-					if(!!(compMethod && compMethod.constructor && compMethod.call && compMethod.apply)){
-						compMethod(args.slice(2));
-					}
-				}
-			}
-		},
+		//componentDo(method, element，args...)
 		"sendEvent":function(cxt,callee,args){
 			
 		},
@@ -33,7 +20,22 @@ define([],function(){
 		},
 		"submit":function(cxt,callee,args){
 			
-		}
+		},
+		"systemCall":function(){
+			
+		},
+		"componentDo":function(cxt,callee,args){
+			var pageInstance = callee.getPageInstance();
+			if(pageInstance != null && args.length > 1){
+				var el = pageInstance.getComponent(args[1]);
+				if(el != null && el.hasOwnProperty(args[0])){
+					var compMethod = el[args[0]];
+					if(!!(compMethod && compMethod.constructor && compMethod.call && compMethod.apply)){
+						compMethod(args.slice(2));
+					}
+				}
+			}
+		},
 	};
 	var MeCommandMixin ={
 		handleCmd:function(cmd){

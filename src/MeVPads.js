@@ -2,7 +2,9 @@ define("mevpads",function(){
 var React = require("react");
 var ReactDOM = require("react-dom");
 var Hammer = require("react-hammerjs");
+var _assign = require("object-assign");
 var PadBuffer = React.createClass({
+	tempPageIdx:-1,
 	getDefaultProps:function(){
 		return {
 			article:null,
@@ -24,14 +26,35 @@ var PadBuffer = React.createClass({
 		return this.props.article.getPageByIdx(this.state.pageIdx);
 	},
 	_getPageInstance:function(){
-		if(this.state.pageIdx == null) return null;
+		if(this.state.pageIdx == -1) return null;
 		return this.props.article.getPageInstanceByIdx(this.state.pageIdx);
-	},	
+	},
+	updateBuffer:function(newState){//不能让pads直接设置pageIdx，所以用这个函数过滤一下
+		var _toSet = _assign({},newState);
+		if(this.state.pageIdx != -1 && this.state.pageIdx != newState.pageIdx && newState.pageIdx != -1){
+		//需要delay修改,先使用无效页，将当前的内容清除，然后再置上新页
+			tempPageIdx = newState.pageIdx;
+			_toSet.pageIdx = -1;
+		}
+		this.setState(_toSet);
+	},
+	tick:function(){
+		if(this.tempPageIdx != -1){
+			this.setState({pageIdx:this.tempPageIdx});
+		}
+		this.tempPageIdx = -1;
+	},
+
 	componentDidUpdate:function(prevProps,prevState){
+		if(this.tempPageIdx != -1 && this.state.pageIdx == -1){
+			this.setInterval(this.tick,0);
+			return;
+		}
 		var react_page = this._getPageInstance();
 		var old_active = prevState.state == "active" ? true : false;
 		var cur_active = this.state.state == "active" ? true : false;
 		if(react_page != null && old_active != cur_active){
+			react_page.setContainerSize(this.props.pageWidth,this.props.pageHeight);
 			react_page.setState({active:cur_active});
 			//console.log("react page update with ",this.state);
 		}
@@ -65,7 +88,7 @@ MeHammer.prototype.handleHammerEvent = function(evt){
 		//向上遍历数，直到hammer的绑定元素
 		while(curElm != null && curElm != this.hammer.element){
 			for(i = 0;i < evt_listeners.length;i ++){
-				if(evt_listeners[i].elem == curElm){//没能理解apply的机制，按道理，1st参数应该对应this，但不是，严谨的做法应该用bind
+				if(evt_listeners[i].id == curElm.id){//没能理解apply的机制，按道理，1st参数应该对应this，但不是，严谨的做法应该用bind
 					if(evt_listeners[i].func.apply(null,[evt]) == false) return;
 				}
 			}
@@ -83,23 +106,23 @@ MeHammer.prototype.stop = function(){
 	this.hammer.stop();
 };
 
-MeHammer.prototype.on = function(evttype,_elem,_func){
+MeHammer.prototype.on = function(evttype,_id,_func){
 	var evts = evttype.split(" ");
 	for(var i = 0;i < evts.length; i ++){
 		if(!this.listeners.hasOwnProperty(evts[i])) this.listeners[evts[i]] = [];
-		this.listeners[evts[i]].push({elem:_elem,func:_func});
+		this.listeners[evts[i]].push({id:_id,func:_func});
 	}
 
 	return;
 };
-MeHammer.prototype.off = function(evttype,source){
+MeHammer.prototype.off = function(evttype,_id){
 	var evts = evttype.split(" ");
 	for(var i = 0;i < evts.length; i ++){
 		if(!this.listeners.hasOwnProperty(evts[i]))continue;
 		var evt_listeners = this.listeners[evts[i]];
 		var j = 0;
 		for(j = 0;j < evt_listeners.length;j ++){
-			if(evt_listeners[j].elem == source)break;
+			if(evt_listeners[j].id == _id)break;
 		}
 		if(j < evt_listeners.length){
 			evt_listeners.splice(j,1);
@@ -151,7 +174,7 @@ var MeVPads = React.createClass({
 		var found = -1;
 		for(var i = 0;i < this.pageCache.length;i ++){
 			if(this.pageCache[i].rate < smallestRate && !this.pageCache[i].lock){
-				smallestRate = this.pageCache[i];
+				smallestRate = this.pageCache[i].rate;
 				found = i;
 			}
 		}
@@ -164,6 +187,11 @@ var MeVPads = React.createClass({
 		if(cacheIdx == -1){
 			cacheIdx = this._findAvailableCache();
 			if(cacheIdx == -1) return;//todo 严重错误
+			/**尝试释放这个buffer*/
+			/*if(this.pageCache[cacheIdx].reactInstance != null){
+				ReactDOM.unmountComponentAtNode(ReactDOM.findDOMNode(this.pageCache[cacheIdx].reactInstance));
+			}*/
+			
 			this.pageCacheIdx[pageIdx] = cacheIdx;
 		}
 		var cache = this.pageCache[cacheIdx];
@@ -172,13 +200,16 @@ var MeVPads = React.createClass({
 		}
 		if(cache.lock) return;//这个cache已经被激活，不用再次激活，，，通常是页面定义有冲突，比如page1的下一页也是page1
 		cache.lock = true;
-		if(state == "active") cache.rate += 2;
-		else cache.rate += 1;
+		if(state == "active") cache.rate += 4;
+		else cache.rate += 2;
+		//if(cache.pageIdx != -1 && cache.pageIdx != pageIdx){
+		//	debugger;
+		//}
 		cache.pageIdx = pageIdx;
 		cache.state = state;
 		cache.loc = loc;
 		if(cache.reactInstance != null){
-			cache.reactInstance.setState({loc:cache.loc,state:cache.state,pageIdx:cache.pageIdx});
+			cache.reactInstance.updateBuffer({loc:cache.loc,state:cache.state,pageIdx:cache.pageIdx});
 		}
 		
 	},
@@ -211,7 +242,7 @@ var MeVPads = React.createClass({
 				if(cache.pageIdx != -1 && cache.reactInstance != null){
 					cache.state = "hide";
 					cache.loc = "none";
-					cache.reactInstance.setState({state:cache.state,loc:cache.loc});
+					cache.reactInstance.updateBuffer({state:cache.state,loc:cache.loc});
 				}
 			}else{
 				cache.lock = false;//释放刚刚申请的page，供下次调度使用

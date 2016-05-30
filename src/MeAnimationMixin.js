@@ -7,35 +7,24 @@ define("MeAnimationMixin",function(){
 		},
 		getDefaultProps:function(){
 			return{
-				auto:true
 			}
 		},
 		getDefaultProps:function(){
 			return {
 				animationClass:"fadeIn",
-				animation:{
+				item_animation:{
 					animationIterationCount:"1",
 					animationDelay:"0s",
 					animationDuration:"1s"
 				},
 			};
 		},
-		pageActive:function(){
-			if(this.props.auto)
-				this.animationActive();
-		},
-		pageDeactive:function(){
-			this.animationDeactive();//无论是否自动启动, 都将动画设为禁止
-		},
 		animationActive:function(evt){
 			this.setState({animationState:"start"});
 		},
 		animationDeactive:function(evt){
 			this.setState({animationState:"no start"});
+
 		},
-		getAnimationClass:function(){
-			var className = (this.state.animationState == "start" ? "animated " + this.props.animationClass:"hidden");
-			return className;
-		}
 	}
 });
